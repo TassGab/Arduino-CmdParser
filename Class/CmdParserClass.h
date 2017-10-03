@@ -11,12 +11,13 @@
 class CmdParserClass
 {
  public:
+ bool CrcEn=true; //flag for crc test
  uint8_t Cmd;//Command
  uint8_t CrcCalc; //Calculated CRC
- uint8_t numbers[MAX_CMD_F];//array of fields
+ uint8_t Field[MAX_CMD_F];//array of fields
  uint8_t Nfield; //N of fields
  char errMsg[MAX_ERR_MSG]; //error message string
- bool error; //flag of parsing error
+ bool erFlag; //flag of parsing error
  void Parse(String);
  private:
  void stringParser(String);
