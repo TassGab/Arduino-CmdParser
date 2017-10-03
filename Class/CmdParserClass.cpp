@@ -8,7 +8,7 @@ void CmdParserClass::Parse(String inCommand){
   Crc16 crc;
    WriteErrMsg("");
    Cmd=-1;
-   error=true;
+   erFlag=false;
    Nfield=-1;
    if (inCommand[inCommand.length()-1] == '.' && inCommand[0]=='#')//
     {   
@@ -20,36 +20,36 @@ void CmdParserClass::Parse(String inCommand){
       int lastI=inCommand.lastIndexOf(',');
       //Serial.println(lastI);
       String crcstr=inCommand.substring(lastI+1,inCommand.length()-1);
-      Serial.println(crcstr);
-      crcext=crcstr.toInt();
-      inCommand.toCharArray(data,lastI);
-      Serial.println(data);
-      crc.clearCrc();
-      Serial.println(crcext,DEC);
-      CrcCalc = crc.XModemCrc((byte *)data,0,lastI+1);
-      Serial.println(CrcCalc,DEC);
+      if(CrcEn)
+      {
+        Serial.println(crcstr);
+        crcext=crcstr.toInt();
+        inCommand.toCharArray(data,lastI);
+        Serial.println(data);
+        crc.clearCrc();
+        Serial.print("crc ext=");
+        Serial.println(crcext,HEX);
+        CrcCalc = crc.XModemCrc((byte *)data,0,lastI+1);
+        Serial.print("crc calc=");
+        Serial.println(CrcCalc,HEX);
 
-      if(crcext == CrcCalc) 
-      {
-        error=false;
-        Serial.println("CRC OK");
-        stringParser(inCommand);
-      }
-      else 
-      {
-        error=true;
-        String s1="CRC error: calc=";
-        s1.concat(CrcCalc);
-        WriteErrMsg(s1);
+        if(crcext != CrcCalc) 
+        {
+          erFlag=true;
+          String s1="CRC error: calc=";
+          s1.concat(CrcCalc);
+          WriteErrMsg(s1);
         //errMsg.concat(CrcCalc);
         //Serial.println(errMsg);
+        }
       }
+      stringParser(inCommand);
       //inCommand="";   
     }  
     else
     {
-      error=true;
-     WriteErrMsg("Sintax error");
+      erFlag=true;
+      WriteErrMsg("Sintax error");
     }
     //inCommand="";
 }
@@ -74,30 +74,30 @@ void CmdParserClass::stringParser(String s)
     {      
       if (s[is] == ',' ) 
       {
-       numbers[ncount]=inString.toInt();
-       Serial.print('>');Serial.println(numbers[ncount]);
+       Field[ncount]=inString.toInt();
+       Serial.print('>');Serial.println(Field[ncount]);
        ncount++;
        // clear the string for new input:
        inString = "";
       }
       else if(s[is] == '.' )
       {
-       numbers[ncount]=inString.toInt();
+       Field[ncount]=inString.toInt();
        inString = "";
-       error=false;
+       erFlag=false;
        WriteErrMsg("No error");
-      Serial.print("\r\nCRC=");Serial.println(numbers[ncount]);
+      Serial.print("\r\nCRC=");Serial.println(Field[ncount]);
      }
     }
     else
     {
-      error=true;
+      erFlag=true;
       WriteErrMsg("N field exceeds "+MAX_CMD_F);
 
     }
   }//end for
-        inString = "";
-  Cmd=(uint8_t)numbers[Fcmd];
+  inString = "";
+  Cmd=(uint8_t)Field[Fcmd];
   Nfield=(uint8_t)ncount;//CRC already removed when stringParser is called
   Serial.print("Cmd=");Serial.println(Cmd);
   Serial.print("errMsg="); Serial.println(errMsg);
