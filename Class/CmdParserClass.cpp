@@ -1,9 +1,45 @@
 /*
  CmdParserClass.cpp - Library for Parsing commands
  Gabriele Tasselli, February 13, 2017
+ Command format: #CMD,Nfield,f1,f2,..fn.
+ in case CRC is added after the final "."
  */
 #include <Crc16.h>
-#include "CmdParser.h"
+#include "CmdParserClass.h"
+#define Fcmd 0
+#define Ff1 1
+//
+void CmdParserClass::CmdCall()
+{
+  switch(Cmd)
+  {
+    case 1: // set time
+      if (Field[1]>1) 
+      {
+        Serial.println("Chiamata puntatore1");
+        if(func1!=NULL) func1();
+      }
+      else
+      {
+        if(func2!=NULL) 
+        {
+          Serial.println("Chiamata puntatore2");
+          func2();
+        }
+      }
+    break;
+    case 2: //
+    
+    break;
+    default:
+      Serial.println("command unknown");
+  }
+}
+CmdParserClass::CmdParserClass()
+{
+  func1=NULL;
+  func2=NULL;
+}
 void CmdParserClass::Parse(String inCommand){
   Crc16 crc;
    WriteErrMsg("");
@@ -17,34 +53,41 @@ void CmdParserClass::Parse(String inCommand){
        //unsigned short value;
        char data[100];
       Serial.print("CMD =");Serial.println(inCommand);
-      int lastI=inCommand.lastIndexOf(',');
+      //int lastI=inCommand.lastIndexOf(',');
       //Serial.println(lastI);
-      String crcstr=inCommand.substring(lastI+1,inCommand.length()-1);
-      if(CrcEn)
-      {
-        Serial.println(crcstr);
-        crcext=crcstr.toInt();
-        inCommand.toCharArray(data,lastI);
-        Serial.println(data);
-        crc.clearCrc();
-        Serial.print("crc ext=");
-        Serial.println(crcext,HEX);
-        CrcCalc = crc.XModemCrc((byte *)data,0,lastI+1);
-        Serial.print("crc calc=");
-        Serial.println(CrcCalc,HEX);
-
-        if(crcext != CrcCalc) 
-        {
-          erFlag=true;
-          String s1="CRC error: calc=";
-          s1.concat(CrcCalc);
-          WriteErrMsg(s1);
-        //errMsg.concat(CrcCalc);
-        //Serial.println(errMsg);
-        }
-      }
-      stringParser(inCommand);
-      //inCommand="";   
+//      String crcstr=inCommand.substring(lastI+1,inCommand.length()-1);
+//      if(CrcEn)
+//      {
+//        Serial.println(crcstr);
+//        crcext=crcstr.toInt();
+//        inCommand.toCharArray(data,lastI);
+//        Serial.println(data);
+//        crc.clearCrc();
+//        Serial.print("crc ext=");
+//        Serial.println(crcext,HEX);
+//        CrcCalc = crc.XModemCrc((byte *)data,0,lastI+1);
+//        Serial.print("crc calc=");
+//        Serial.println(CrcCalc,HEX);
+//
+//        if(crcext != CrcCalc) 
+//        {
+//          erFlag=true;
+//          String s1="CRC error: calc=";
+//          s1.concat(CrcCalc);
+//          WriteErrMsg(s1);
+//        //errMsg.concat(CrcCalc);
+//        //Serial.println(errMsg);
+//        }
+//      }
+      
+      Nfield=(uint8_t)stringParser(inCommand);
+      Cmd=(uint8_t)Field[Fcmd];
+  
+  Serial.print("Cmd=");Serial.println(Cmd);
+  Serial.print("errMsg="); Serial.println(errMsg);
+  Serial.print("Nfield="); Serial.println(Nfield);
+      //inCommand="";
+      CmdCall();
     }  
     else
     {
@@ -53,16 +96,15 @@ void CmdParserClass::Parse(String inCommand){
     }
     //inCommand="";
 }
-void CmdParserClass::stringParser(String s)
+uint8_t CmdParserClass::stringParser(String s)
 {
- //Format #CMD,f1,f2,...,CRC.
- #define Fcmd 0
- #define Ff1 1
-  int is=0;
-  int ncount=0;
-  int inChar;
+ //Format #CMD,f1,f2,...fn.
+ 
+  uint8_t is=0;
+  uint8_t ncount=0;
+  //int inChar;
   String inString="";
-  for (is=1;is<s.length();is++)
+  for (is=1;is<s.length();is++) //from 1 discard #
   {
     
     if (isDigit(s[is])) {
@@ -86,7 +128,9 @@ void CmdParserClass::stringParser(String s)
        inString = "";
        erFlag=false;
        WriteErrMsg("No error");
-      Serial.print("\r\nCRC=");Serial.println(Field[ncount]);
+      //Serial.print("\r\nCRC=");Serial.println(Field[ncount]);
+      Serial.print('>');Serial.println(Field[ncount]);
+      ncount++;
      }
     }
     else
@@ -97,14 +141,11 @@ void CmdParserClass::stringParser(String s)
     }
   }//end for
   inString = "";
-  Cmd=(uint8_t)Field[Fcmd];
-  Nfield=(uint8_t)ncount;//CRC already removed when stringParser is called
-  Serial.print("Cmd=");Serial.println(Cmd);
-  Serial.print("errMsg="); Serial.println(errMsg);
-  Serial.print("Nfield="); Serial.println(Nfield);
+  return ncount;
 }
 void CmdParserClass::WriteErrMsg(String s)
 {
   s.toCharArray(errMsg,MAX_ERR_MSG);
 }
+
 
